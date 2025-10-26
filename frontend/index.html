@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gerenciamento de Pagamentos</title>
+    
+    <!-- Link para o CSS externo -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Ícones Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Cabeçalho da Aplicação -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1><i class="fas fa-money-bill-wave"></i> Gerenciador de Pagamentos</h1>
+                <p class="subtitle">Sistema completo para controle financeiro</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Container Principal -->
+    <div class="container">
+        <!-- Cards de Estatísticas (Dashboard) -->
+        <section class="dashboard">
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="total-clientes">0</h3>
+                    <p>Clientes Ativos</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="pagamentos-pendentes">0</h3>
+                    <p>Pagamentos Pendentes</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="pagamentos-vencidos">0</h3>
+                    <p>Pagamentos Vencidos</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="valor-recebido">R$ 0,00</h3>
+                    <p>Recebido este Mês</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navegação por Abas -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="clientes">
+                <i class="fas fa-users"></i> Clientes
+            </button>
+            <button class="tab-btn" data-tab="pagamentos">
+                <i class="fas fa-credit-card"></i> Pagamentos
+            </button>
+            <button class="tab-btn" data-tab="inadimplentes">
+                <i class="fas fa-exclamation-circle"></i> Inadimplentes
+            </button>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        
+        <!-- ABA: CLIENTES -->
+        <div class="tab-content active" id="clientes-tab">
+            <div class="section-header">
+                <h2><i class="fas fa-users"></i> Gerenciamento de Clientes</h2>
+                <button class="btn btn-primary" onclick="abrirModalCliente()">
+                    <i class="fas fa-plus"></i> Novo Cliente
+                </button>
+            </div>
+
+            <!-- Busca de Clientes -->
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="busca-clientes" placeholder="Buscar por nome ou CPF...">
+            </div>
+
+            <!-- Lista de Clientes -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Telefone</th>
+                            <th>Email</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-clientes">
+                        <!-- Os clientes serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ABA: PAGAMENTOS -->
+        <div class="tab-content" id="pagamentos-tab">
+            <div class="section-header">
+                <h2><i class="fas fa-credit-card"></i> Gerenciamento de Pagamentos</h2>
+                <button class="btn btn-primary" onclick="abrirModalPagamento()">
+                    <i class="fas fa-plus"></i> Novo Pagamento
+                </button>
+            </div>
+
+            <!-- Filtros de Pagamentos -->
+            <div class="filters">
+                <select id="filtro-status" class="filter-select">
+                    <option value="">Todos os Status</option>
+                    <option value="pendente">Pendentes</option>
+                    <option value="pago">Pagos</option>
+                    <option value="cancelado">Cancelados</option>
+                </select>
+            </div>
+
+            <!-- Lista de Pagamentos -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Descrição</th>
+                            <th>Valor</th>
+                            <th>Vencimento</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-pagamentos">
+                        <!-- Os pagamentos serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ABA: INADIMPLENTES -->
+        <div class="tab-content" id="inadimplentes-tab">
+            <div class="section-header">
+                <h2><i class="fas fa-exclamation-circle"></i> Clientes Inadimplentes</h2>
+            </div>
+
+            <!-- Lista de Inadimplentes -->
+            <div class="inadimplentes-container" id="lista-inadimplentes">
+                <!-- Os inadimplentes serão inseridos aqui via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Cadastro/Edição de Cliente -->
+    <div id="modal-cliente" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-cliente-titulo">Novo Cliente</h3>
+                <button class="close-btn" onclick="fecharModalCliente()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="form-cliente" onsubmit="salvarCliente(event)">
+                <input type="hidden" id="cliente-id">
+                
+                <div class="form-group">
+                    <label for="cliente-nome">Nome Completo *</label>
+                    <input type="text" id="cliente-nome" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cliente-cpf">CPF</label>
+                    <input type="text" id="cliente-cpf" placeholder="000.000.000-00">
+                </div>
+
+                <div class="form-group">
+                    <label for="cliente-telefone">Telefone</label>
+                    <input type="text" id="cliente-telefone" placeholder="(00) 00000-0000">
+                </div>
+
+                <div class="form-group">
+                    <label for="cliente-email">Email</label>
+                    <input type="email" id="cliente-email" placeholder="exemplo@email.com">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalCliente()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Cadastro de Pagamento -->
+    <div id="modal-pagamento" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Novo Pagamento</h3>
+                <button class="close-btn" onclick="fecharModalPagamento()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="form-pagamento" onsubmit="salvarPagamento(event)">
+                <div class="form-group">
+                    <label for="pagamento-cliente">Cliente *</label>
+                    <select id="pagamento-cliente" required>
+                        <option value="">Selecione um cliente</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pagamento-descricao">Descrição</label>
+                    <input type="text" id="pagamento-descricao" placeholder="Ex: Mensalidade Outubro/2024">
+                </div>
+
+                <div class="form-group">
+                    <label for="pagamento-valor">Valor *</label>
+                    <input type="number" id="pagamento-valor" step="0.01" required placeholder="0.00">
+                </div>
+
+                <div class="form-group">
+                    <label for="pagamento-vencimento">Data de Vencimento *</label>
+                    <input type="date" id="pagamento-vencimento" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalPagamento()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        
