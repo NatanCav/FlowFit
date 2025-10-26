@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Cliente - Sistema de Pagamentos</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1><i class="fas fa-money-bill-wave"></i> Sistema de Pagamentos</h1>
+                    <p class="subtitle">Cadastro de Cliente</p>
+                </div>
+                <div class="user-info"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <div class="container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="clientes.html" class="active"><i class="fas fa-users"></i> Clientes</a></li>
+                <li><a href="inadimplentes.html"><i class="fas fa-exclamation-circle"></i> Inadimplentes</a></li>
+                <li><a href="usuarios.html" id="menu-usuarios"><i class="fas fa-user-shield"></i> Usuários</a></li>
+            </ul>
+        </nav>
+
+        <!-- Formulário -->
+        <div style="max-width: 800px; margin: 0 auto;">
+            <div class="section-header">
+                <h2><i class="fas fa-user-plus"></i> Novo Cliente</h2>
+                <a href="clientes.html" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+
+            <div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <form id="form-cliente" onsubmit="salvarCliente(event)">
+                    <!-- Dados Pessoais -->
+                    <h3 style="margin-bottom: 1.5rem; color: #4f46e5; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-user"></i> Dados Pessoais
+                    </h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nome">Nome Completo *</label>
+                            <input type="text" id="nome" required placeholder="Ex: João da Silva">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cpf">CPF</label>
+                            <input type="text" id="cpf" placeholder="000.000.000-00">
+                        </div>
+                    </div>
+
+                    <!-- Contato -->
+                    <h3 style="margin: 2rem 0 1.5rem; color: #4f46e5; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-phone"></i> Contato
+                    </h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="telefone">Telefone</label>
+                            <input type="text" id="telefone" placeholder="(00) 00000-0000">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" placeholder="exemplo@email.com">
+                        </div>
+                    </div>
+
+                    <!-- Endereço -->
+                    <h3 style="margin: 2rem 0 1.5rem; color: #4f46e5; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-map-marker-alt"></i> Endereço
+                    </h3>
+
+                    <div class="form-group">
+                        <label for="endereco">Endereço Completo</label>
+                        <input type="text" id="endereco" placeholder="Rua, Número, Bairro, Cidade - UF">
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="form-group">
+                        <label for="observacoes">Observações</label>
+                        <textarea id="observacoes" placeholder="Informações adicionais sobre o cliente..."></textarea>
+                    </div>
+
+                    <!-- Botões -->
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                        <a href="clientes.html" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="btn-salvar">
+                            <i class="fas fa-save"></i> Salvar Cliente
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        verificarAutenticacao();
+        inicializarInfoUsuario();
+        marcarMenuAtivo();
+
+        if (!ehAdmin()) {
+            document.getElementById('menu-usuarios').style.display = 'none';
+        }
+
+        // Aplica máscaras
+        aplicarMascaraCPF(document.getElementById('cpf'));
+        aplicarMascaraTelefone(document.getElementById('telefone'));
+
+        // Salvar cliente
+        async function salvarCliente(event) {
+            event.preventDefault();
+
+            const btnSalvar = document.getElementById('btn-salvar');
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+            const dados = {
+                nome: document.getElementById('nome').value,
+                cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
+                telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
+                email: document.getElementById('email').value,
+                endereco: document.getElementById('endereco').value,
+                observacoes: document.getElementById('observacoes').value
+            };
+
+            try {
+                const response = await fetchAuth(`${API_URL}/clientes`, {
+                    method: 'POST',
+                    body: JSON.stringify(dados)
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert('Cliente cadastrado com sucesso!');
+                    window.location.href = 'clientes.html';
+                } else {
+                    alert('Erro ao cadastrar cliente: ' + resultado.error);
+                    btnSalvar.disabled = false;
+                    btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar Cliente';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao cadastrar cliente');
+                btnSalvar.disabled = false;
+                btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar Cliente';
+            }
+        }
+    </script>
+</body>
+</html>
