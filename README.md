@@ -179,33 +179,6 @@ Você verá uma mensagem assim:
 - Visualiza relatórios
 - Não pode criar/editar usuários
 
-## 🎨 Personalização
-
-### Alterar Cores
-Edite o arquivo `frontend/css/style.css` na seção de variáveis:
-
-```css
-:root {
-    --primary: #4f46e5;      /* Cor principal */
-    --success: #10b981;      /* Verde (sucesso) */
-    --danger: #ef4444;       /* Vermelho (erro) */
-    --warning: #f59e0b;      /* Laranja (alerta) */
-}
-```
-
-### Alterar Porta do Servidor
-Edite `backend/app.py` na última linha:
-
-```python
-app.run(debug=True, host='0.0.0.0', port=5000)  # Altere 5000 para sua porta
-```
-
-**IMPORTANTE:** Se alterar a porta, atualize também em `frontend/js/utils.js`:
-
-```javascript
-const API_URL = 'http://localhost:5000/api';  // Atualize a porta aqui
-```
-
 ## 🔒 Segurança
 
 ### Produção
