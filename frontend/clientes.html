@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes - Sistema de Pagamentos</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1><i class="fas fa-money-bill-wave"></i> Sistema de Pagamentos</h1>
+                    <p class="subtitle">Gerenciamento de Clientes</p>
+                </div>
+                <div class="user-info"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <div class="container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="clientes.html" class="active"><i class="fas fa-users"></i> Clientes</a></li>
+                <li><a href="inadimplentes.html"><i class="fas fa-exclamation-circle"></i> Inadimplentes</a></li>
+                <li><a href="usuarios.html" id="menu-usuarios"><i class="fas fa-user-shield"></i> Usuários</a></li>
+            </ul>
+        </nav>
+
+        <!-- Cabeçalho da Seção -->
+        <div class="section-header">
+            <h2><i class="fas fa-users"></i> Lista de Clientes</h2>
+            <a href="cadastro-cliente.html" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Novo Cliente
+            </a>
+        </div>
+
+        <!-- Busca -->
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="busca-clientes" placeholder="Buscar por nome ou CPF...">
+        </div>
+
+        <!-- Tabela de Clientes -->
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Telefone</th>
+                        <th>Email</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-clientes">
+                    <tr>
+                        <td colspan="5" class="loading">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        verificarAutenticacao();
+        inicializarInfoUsuario();
+        marcarMenuAtivo();
+
+        if (!ehAdmin()) {
+            document.getElementById('menu-usuarios').style.display = 'none';
+        }
+
+        // Carrega lista de clientes
+        async function carregarClientes(busca = '') {
+            try {
+                const url = busca ? 
+                    `${API_URL}/clientes?busca=${encodeURIComponent(busca)}` : 
+                    `${API_URL}/clientes`;
+
+                const response = await fetchAuth(url);
+                const clientes = await response.json();
+
+                const tbody = document.getElementById('lista-clientes');
+
+                if (clientes.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <h3>Nenhum cliente encontrado</h3>
+                                <p>Clique em "Novo Cliente" para cadastrar</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = clientes.map(cliente => `
+                    <tr>
+                        <td><strong>${cliente.nome}</strong></td>
+                        <td>${formatarCPF(cliente.cpf)}</td>
+                        <td>${formatarTelefone(cliente.telefone)}</td>
+                        <td>${cliente.email || '-'}</td>
+                        <td class="table-actions">
+                            <button class="btn btn-sm btn-primary" onclick="verHistorico(${cliente.id})" title="Histórico de Pagamentos">
+                                <i class="fas fa-history"></i>
+                            </button>
+                            <a href="editar-cliente.html?id=${cliente.id}" class="btn btn-sm btn-secondary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-danger" onclick="deletarCliente(${cliente.id}, '${cliente.nome}')" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar clientes:', error);
+                document.getElementById('lista-clientes').innerHTML = `
+                    <tr><td colspan="5" class="empty-state">Erro ao carregar clientes</td></tr>
+                `;
+            }
+        }
+
+        // Ver histórico de pagamentos
+        function verHistorico(clienteId) {
+            window.location.href = `historico-pagamento.html?id=${clienteId}`;
+        }
+
+        // Deletar cliente
+        async function deletarCliente(id, nome) {
+            if (!confirm(`Tem certeza que deseja excluir o cliente "${nome}"?\n\nEsta ação não pode ser desfeita!`)) {
+                return;
+            }
+
+            try {
+                const response = await fetchAuth(`${API_URL}/clientes/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert('Cliente excluído com sucesso!');
+                    carregarClientes();
+                } else {
+                    alert('Erro ao excluir cliente: ' + resultado.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao excluir cliente');
+            }
+        }
+
+        // Busca com debounce
+        const inputBusca = document.getElementById('busca-clientes');
+        inputBusca.addEventListener('input', debounce(function(e) {
+            carregarClientes(e.target.value);
+        }, 500));
+
+        // Carrega clientes ao iniciar
+        carregarClientes();
+    </script>
+</body>
+</html>
