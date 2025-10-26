@@ -1,178 +1,465 @@
-
-/**
- * UTILS.JS - Funções Utilitárias do Sistema
- * Contém funções auxiliares reutilizáveis
- */
-
-// URL base da API
-const API_URL = 'http://localhost:5000/api';
-
-/**
- * Formata valor para moeda brasileira (R$)
- * @param {number} valor - Valor numérico
- * @returns {string} Valor formatado
- */
-function formatarMoeda(valor) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(valor);
-}
-
-/**
- * Formata data no padrão brasileiro (DD/MM/AAAA)
- * @param {string} data - Data no formato ISO (AAAA-MM-DD)
- * @returns {string} Data formatada
- */
-function formatarData(data) {
-    if (!data) return '-';
-    const [ano, mes, dia] = data.split('-');
-    return `${dia}/${mes}/${ano}`;
-}
-
-/**
- * Converte data brasileira para formato ISO
- * @param {string} data - Data no formato DD/MM/AAAA
- * @returns {string} Data no formato AAAA-MM-DD
- */
-function dataParaISO(data) {
-    const [dia, mes, ano] = data.split('/');
-    return `${ano}-${mes}-${dia}`;
-}
-
-/**
- * Formata CPF (000.000.000-00)
- * @param {string} cpf - CPF sem formatação
- * @returns {string} CPF formatado
- */
-function formatarCPF(cpf) {
-    if (!cpf) return '';
-    cpf = cpf.replace(/\D/g, '');
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-}
-
-/**
- * Formata telefone ((00) 00000-0000)
- * @param {string} telefone - Telefone sem formatação
- * @returns {string} Telefone formatado
- */
-function formatarTelefone(telefone) {
-    if (!telefone) return '';
-    telefone = telefone.replace(/\D/g, '');
-    if (telefone.length === 11) {
-        return telefone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    }
-    return telefone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-}
-
-/**
- * Calcula dias entre duas datas
- * @param {string} dataInicial - Data inicial
- * @param {string} dataFinal - Data final
- * @returns {number} Número de dias
- */
-function calcularDiasEntreDatas(dataInicial, dataFinal) {
-    const data1 = new Date(dataInicial);
-    const data2 = new Date(dataFinal);
-    const diffTime = Math.abs(data2 - data1);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-}
-
-/**
- * Verifica se uma data está vencida
- * @param {string} dataVencimento - Data de vencimento
- * @returns {boolean} True se vencida
- */
-function estaVencido(dataVencimento) {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const vencimento = new Date(dataVencimento);
-    return vencimento < hoje;
-}
-
-/**
- * Exibe mensagem de alerta
- * @param {string} mensagem - Texto da mensagem
- * @param {string} tipo - Tipo do alerta (success, danger, warning, info)
- */
-function mostrarAlerta(mensagem, tipo = 'info') {
-    const alertaDiv = document.createElement('div');
-    alertaDiv.className = `alert alert-${tipo}`;
-    alertaDiv.innerHTML = `
-        <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'danger' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${mensagem}</span>
-    `;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Pagamentos - Sistema de Pagamentos</title>
     
-    document.body.appendChild(alertaDiv);
-    
-    // Remove alerta após 3 segundos
-    setTimeout(() => {
-        alertaDiv.remove();
-    }, 3000);
-}
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1><i class="fas fa-money-bill-wave"></i> Sistema de Pagamentos</h1>
+                    <p class="subtitle">Histórico de Pagamentos</p>
+                </div>
+                <div class="user-info"></div>
+            </div>
+        </div>
+    </header>
 
-/**
- * Confirma ação com o usuário
- * @param {string} mensagem - Mensagem de confirmação
- * @returns {boolean} True se confirmado
- */
-function confirmar(mensagem) {
-    return confirm(mensagem);
-}
+    <!-- Navegação -->
+    <div class="container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="clientes.html"><i class="fas fa-users"></i> Clientes</a></li>
+                <li><a href="inadimplentes.html"><i class="fas fa-exclamation-circle"></i> Inadimplentes</a></li>
+                <li><a href="usuarios.html" id="menu-usuarios"><i class="fas fa-user-shield"></i> Usuários</a></li>
+            </ul>
+        </nav>
 
-/**
- * Aplica máscara de CPF em input
- * @param {HTMLInputElement} input - Campo de input
- */
-function aplicarMascaraCPF(input) {
-    input.addEventListener('input', function(e) {
-        let valor = e.target.value.replace(/\D/g, '');
-        if (valor.length > 11) valor = valor.substr(0, 11);
-        
-        if (valor.length > 9) {
-            valor = valor.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-        } else if (valor.length > 6) {
-            valor = valor.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3');
-        } else if (valor.length > 3) {
-            valor = valor.replace(/(\d{3})(\d{3})/, '$1.$2');
+        <!-- Informações do Cliente -->
+        <div id="info-cliente" style="background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Carregando...
+            </div>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="dashboard" style="margin-bottom: 2rem;">
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="total-pagos">-</h3>
+                    <p>Pagamentos Realizados</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="total-pendentes">-</h3>
+                    <p>Pagamentos Pendentes</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="valor-pendente">-</h3>
+                    <p>Valor Pendente</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="section-header">
+            <h2><i class="fas fa-history"></i> Histórico Completo</h2>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="btn btn-primary" onclick="abrirModalPagamento()">
+                    <i class="fas fa-plus"></i> Novo Pagamento
+                </button>
+                <a href="clientes.html" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+
+        <!-- Tabela de Histórico -->
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                        <th>Vencimento</th>
+                        <th>Data Pagamento</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-historico">
+                    <tr>
+                        <td colspan="6" class="loading">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: Novo Pagamento -->
+    <div id="modal-pagamento" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Novo Pagamento</h3>
+                <button class="close-btn" onclick="fecharModalPagamento()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="form-pagamento" onsubmit="salvarPagamento(event)">
+                    <div class="form-group">
+                        <label for="descricao">Descrição</label>
+                        <input type="text" id="descricao" placeholder="Ex: Mensalidade Novembro/2024">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="valor">Valor *</label>
+                            <input type="number" id="valor" step="0.01" required placeholder="0.00">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vencimento">Vencimento *</label>
+                            <input type="date" id="vencimento" required>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalPagamento()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btn-salvar-pagamento">
+                            <i class="fas fa-save"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Registrar Pagamento -->
+    <div id="modal-registrar" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Registrar Pagamento</h3>
+                <button class="close-btn" onclick="fecharModalRegistrar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="form-registrar" onsubmit="confirmarPagamento(event)">
+                    <input type="hidden" id="pagamento-id">
+                    
+                    <div class="form-group">
+                        <label for="metodo-pagamento">Método de Pagamento</label>
+                        <select id="metodo-pagamento" required>
+                            <option value="">Selecione...</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                            <option value="Cartão de Débito">Cartão de Débito</option>
+                            <option value="PIX">PIX</option>
+                            <option value="Transferência">Transferência Bancária</option>
+                            <option value="Boleto">Boleto</option>
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>A data de pagamento será registrada como hoje.</span>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalRegistrar()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Confirmar Pagamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        verificarAutenticacao();
+        inicializarInfoUsuario();
+        marcarMenuAtivo();
+
+        if (!ehAdmin()) {
+            document.getElementById('menu-usuarios').style.display = 'none';
         }
-        
-        e.target.value = valor;
-    });
-}
 
-/**
- * Aplica máscara de telefone em input
- * @param {HTMLInputElement} input - Campo de input
- */
-function aplicarMascaraTelefone(input) {
-    input.addEventListener('input', function(e) {
-        let valor = e.target.value.replace(/\D/g, '');
-        if (valor.length > 11) valor = valor.substr(0, 11);
-        
-        if (valor.length > 10) {
-            valor = valor.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-        } else if (valor.length > 6) {
-            valor = valor.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-        } else if (valor.length > 2) {
-            valor = valor.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+        // Obtém ID da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const clienteId = urlParams.get('id');
+
+        if (!clienteId) {
+            alert('Cliente não encontrado');
+            window.location.href = 'clientes.html';
         }
-        
-        e.target.value = valor;
-    });
-}
 
-/**
- * Debounce - Atrasa execução de função
- * @param {Function} func - Função a ser executada
- * @param {number} delay - Tempo de atraso em ms
- * @returns {Function} Função com debounce
- */
-function debounce(func, delay = 300) {
-    let timeoutId;
-    return function(...args) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func.apply(this, args), delay);
-    };
-}
+        // Carrega informações do cliente
+        async function carregarInfoCliente() {
+            try {
+                const response = await fetchAuth(`${API_URL}/clientes/${clienteId}`);
+                const cliente = await response.json();
+
+                document.getElementById('info-cliente').innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2 style="margin-bottom: 0.5rem; color: #4f46e5;">
+                                <i class="fas fa-user"></i> ${cliente.nome}
+                            </h2>
+                            <p style="color: #6b7280; margin-bottom: 0.25rem;">
+                                <i class="fas fa-id-card"></i> CPF: ${formatarCPF(cliente.cpf)}
+                            </p>
+                            <p style="color: #6b7280; margin-bottom: 0.25rem;">
+                                <i class="fas fa-phone"></i> ${formatarTelefone(cliente.telefone)}
+                            </p>
+                            <p style="color: #6b7280;">
+                                <i class="fas fa-envelope"></i> ${cliente.email || 'Não informado'}
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <a href="editar-cliente.html?id=${cliente.id}" class="btn btn-secondary">
+                                <i class="fas fa-edit"></i> Editar Cliente
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                // Atualiza estatísticas
+                if (cliente.estatisticas) {
+                    document.getElementById('total-pagos').textContent = cliente.estatisticas.pagamentos_pagos || 0;
+                    document.getElementById('total-pendentes').textContent = cliente.estatisticas.pagamentos_pendentes || 0;
+                    document.getElementById('valor-pendente').textContent = formatarMoeda(cliente.estatisticas.valor_pendente || 0);
+                }
+
+            } catch (error) {
+                console.error('Erro ao carregar cliente:', error);
+            }
+        }
+
+        // Carrega histórico de pagamentos
+        async function carregarHistorico() {
+            try {
+                const response = await fetchAuth(`${API_URL}/historico/${clienteId}`);
+                const pagamentos = await response.json();
+
+                const tbody = document.getElementById('lista-historico');
+
+                if (pagamentos.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <h3>Nenhum pagamento registrado</h3>
+                                <p>Clique em "Novo Pagamento" para cadastrar</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = pagamentos.map(pag => {
+                    let statusBadge = '';
+                    let acoes = '';
+
+                    if (pag.status === 'pago') {
+                        statusBadge = '<span class="badge badge-success">Pago</span>';
+                        acoes = `<button class="btn btn-sm btn-danger" onclick="cancelarPagamento(${pag.id})" title="Cancelar">
+                            <i class="fas fa-ban"></i>
+                        </button>`;
+                    } else if (pag.status === 'pendente') {
+                        const vencido = estaVencido(pag.vencimento);
+                        statusBadge = vencido ? 
+                            '<span class="badge badge-danger">Vencido</span>' : 
+                            '<span class="badge badge-warning">Pendente</span>';
+                        acoes = `
+                            <button class="btn btn-sm btn-success" onclick="abrirModalRegistrar(${pag.id})" title="Registrar Pagamento">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deletarPagamento(${pag.id})" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                    } else {
+                        statusBadge = '<span class="badge badge-danger">Cancelado</span>';
+                        acoes = `<button class="btn btn-sm btn-danger" onclick="deletarPagamento(${pag.id})" title="Excluir">
+                            <i class="fas fa-trash"></i>
+                        </button>`;
+                    }
+
+                    return `
+                        <tr>
+                            <td>${pag.descricao || '-'}</td>
+                            <td><strong>${formatarMoeda(pag.valor)}</strong></td>
+                            <td>${formatarData(pag.vencimento)}</td>
+                            <td>${pag.data_pagamento ? formatarData(pag.data_pagamento) : '-'}</td>
+                            <td>${statusBadge}</td>
+                            <td class="table-actions">${acoes}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar histórico:', error);
+            }
+        }
+
+        // Abrir modal de novo pagamento
+        function abrirModalPagamento() {
+            document.getElementById('modal-pagamento').classList.add('active');
+        }
+
+        function fecharModalPagamento() {
+            document.getElementById('modal-pagamento').classList.remove('active');
+            document.getElementById('form-pagamento').reset();
+        }
+
+        // Salvar novo pagamento
+        async function salvarPagamento(event) {
+            event.preventDefault();
+
+            const btnSalvar = document.getElementById('btn-salvar-pagamento');
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+            const dados = {
+                cliente_id: parseInt(clienteId),
+                descricao: document.getElementById('descricao').value,
+                valor: parseFloat(document.getElementById('valor').value),
+                vencimento: document.getElementById('vencimento').value
+            };
+
+            try {
+                const usuario = obterUsuario();
+                const response = await fetchAuth(`${API_URL}/pagamentos`, {
+                    method: 'POST',
+                    body: JSON.stringify({...dados, usuario_id: usuario.id})
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert('Pagamento cadastrado com sucesso!');
+                    fecharModalPagamento();
+                    carregarInfoCliente();
+                    carregarHistorico();
+                } else {
+                    alert('Erro ao cadastrar pagamento');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao cadastrar pagamento');
+            }
+
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        }
+
+        // Abrir modal de registrar pagamento
+        function abrirModalRegistrar(pagamentoId) {
+            document.getElementById('pagamento-id').value = pagamentoId;
+            document.getElementById('modal-registrar').classList.add('active');
+        }
+
+        function fecharModalRegistrar() {
+            document.getElementById('modal-registrar').classList.remove('active');
+            document.getElementById('form-registrar').reset();
+        }
+
+        // Confirmar pagamento
+        async function confirmarPagamento(event) {
+            event.preventDefault();
+
+            const pagamentoId = document.getElementById('pagamento-id').value;
+            const metodo = document.getElementById('metodo-pagamento').value;
+
+            try {
+                const response = await fetchAuth(`${API_URL}/pagamentos/${pagamentoId}/pagar`, {
+                    method: 'POST',
+                    body: JSON.stringify({ metodo_pagamento: metodo })
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert('Pagamento registrado com sucesso!');
+                    fecharModalRegistrar();
+                    carregarInfoCliente();
+                    carregarHistorico();
+                } else {
+                    alert('Erro ao registrar pagamento');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao registrar pagamento');
+            }
+        }
+
+        // Cancelar pagamento
+        async function cancelarPagamento(pagamentoId) {
+            if (!confirm('Tem certeza que deseja cancelar este pagamento?')) return;
+
+            try {
+                const response = await fetchAuth(`${API_URL}/pagamentos/${pagamentoId}/cancelar`, {
+                    method: 'POST'
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert('Pagamento cancelado!');
+                    carregarInfoCliente();
+                    carregarHistorico();
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+
+        // Deletar pagamento
+        async function deletarPagamento(pagamentoId) {
+            if (!confirm('Tem certeza que deseja excluir este pagamento?\n\nEsta ação não pode ser desfeita!')) return;
+
+            try {
+                const response = await fetchAuth(`${API_URL}/pagamentos/${pagamentoId}`, {
+                    method: 'DELETE'
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert('Pagamento excluído!');
+                    carregarInfoCliente();
+                    carregarHistorico();
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+
+        // Inicializa
+        carregarInfoCliente();
+        carregarHistorico();
+    </script>
+</body>
+</html>
