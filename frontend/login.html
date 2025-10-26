@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Pagamentos</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/login.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Container de Login -->
+    <div class="login-container">
+        <!-- Cabeçalho -->
+        <div class="login-header">
+            <i class="fas fa-money-bill-wave"></i>
+            <h1>Sistema de Pagamentos</h1>
+            <p>Faça login para acessar o sistema</p>
+        </div>
+
+        <!-- Corpo do Formulário -->
+        <div class="login-body">
+            <!-- Alerta de erro (oculto inicialmente) -->
+            <div id="alerta-erro" class="alert alert-danger" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="mensagem-erro"></span>
+            </div>
+
+            <!-- Formulário de Login -->
+            <form id="form-login" onsubmit="fazerLogin(event)">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <div class="input-group">
+                        <i class="fas fa-envelope"></i>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            placeholder="seu@email.com" 
+                            required
+                            autocomplete="email"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha</label>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input 
+                            type="password" 
+                            id="senha" 
+                            placeholder="Digite sua senha" 
+                            required
+                            autocomplete="current-password"
+                        >
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login" id="btn-login">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Entrar
+                </button>
+            </form>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="login-footer">
+            <p>
+                <strong>Usuário padrão:</strong> admin@sistema.com<br>
+                <strong>Senha:</strong> admin123
+            </p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // URL da API
+        const API_URL = 'http://localhost:5000/api';
+
+        /**
+         * Função de Login
+         */
+        async function fazerLogin(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            const btnLogin = document.getElementById('btn-login');
+            const alertaErro = document.getElementById('alerta-erro');
+            const mensagemErro = document.getElementById('mensagem-erro');
+
+            // Desabilita botão e mostra loading
+            btnLogin.disabled = true;
+            btnLogin.innerHTML = '<div class="spinner"></div> Entrando...';
+            alertaErro.style.display = 'none';
+
+            try {
+                // Faz requisição de login
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, senha })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Salva token e dados do usuário
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+
+                    // Redireciona para dashboard
+                    window.location.href = 'dashboard.html';
+                } else {
+                    // Mostra erro
+                    mensagemErro.textContent = data.error || 'Erro ao fazer login';
+                    alertaErro.style.display = 'flex';
+
+                    // Reabilita botão
+                    btnLogin.disabled = false;
+                    btnLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mensagemErro.textContent = 'Erro ao conectar com o servidor. Verifique se o backend está rodando.';
+                alertaErro.style.display = 'flex';
+
+                // Reabilita botão
+                btnLogin.disabled = false;
+                btnLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+            }
+        }
+
+        // Verifica se já está logado
+        if (localStorage.getItem('token')) {
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+</body>
+</html>
