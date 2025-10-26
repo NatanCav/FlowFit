@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários - Sistema de Pagamentos</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1><i class="fas fa-money-bill-wave"></i> Sistema de Pagamentos</h1>
+                    <p class="subtitle">Gerenciamento de Usuários</p>
+                </div>
+                <div class="user-info"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <div class="container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="clientes.html"><i class="fas fa-users"></i> Clientes</a></li>
+                <li><a href="inadimplentes.html"><i class="fas fa-exclamation-circle"></i> Inadimplentes</a></li>
+                <li><a href="usuarios.html" class="active"><i class="fas fa-user-shield"></i> Usuários</a></li>
+            </ul>
+        </nav>
+
+        <!-- Cabeçalho da Seção -->
+        <div class="section-header">
+            <h2><i class="fas fa-user-shield"></i> Usuários do Sistema</h2>
+            <button class="btn btn-primary" onclick="abrirModalUsuario()">
+                <i class="fas fa-plus"></i> Novo Usuário
+            </button>
+        </div>
+
+        <!-- Tabela de Usuários -->
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Tipo</th>
+                        <th>Data Cadastro</th>
+                        <th>Último Acesso</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-usuarios">
+                    <tr>
+                        <td colspan="6" class="loading">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: Criar/Editar Usuário -->
+    <div id="modal-usuario" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-titulo">Novo Usuário</h3>
+                <button class="close-btn" onclick="fecharModalUsuario()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="form-usuario" onsubmit="salvarUsuario(event)">
+                    <input type="hidden" id="usuario-id">
+
+                    <div class="form-group">
+                        <label for="nome">Nome Completo *</label>
+                        <input type="text" id="nome" required placeholder="Ex: Maria Silva">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" id="email" required placeholder="usuario@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tipo">Tipo de Usuário *</label>
+                        <select id="tipo" required>
+                            <option value="operador">Operador</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">
+                            <strong>Operador:</strong> Gerencia clientes e pagamentos<br>
+                            <strong>Administrador:</strong> Acesso total ao sistema
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="senha">Senha <span id="senha-label">*</span></label>
+                        <input type="password" id="senha" placeholder="Mínimo 6 caracteres">
+                        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">
+                            <span id="senha-hint">Obrigatório para novo usuário</span>
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmar-senha">Confirmar Senha <span id="confirmar-label">*</span></label>
+                        <input type="password" id="confirmar-senha" placeholder="Digite a senha novamente">
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalUsuario()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btn-salvar-usuario">
+                            <i class="fas fa-save"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        // Verifica autenticação e permissão
+        verificarAutenticacao();
+        inicializarInfoUsuario();
+        marcarMenuAtivo();
+
+        if (!ehAdmin()) {
+            alert('Acesso negado! Apenas administradores podem acessar esta página.');
+            window.location.href = 'dashboard.html';
+        }
+
+        let editandoUsuarioId = null;
+
+        // Carrega lista de usuários
+        async function carregarUsuarios() {
+            try {
+                const response = await fetchAuth(`${API_URL}/usuarios`);
+                const usuarios = await response.json();
+
+                const tbody = document.getElementById('lista-usuarios');
+
+                if (usuarios.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <h3>Nenhum usuário encontrado</h3>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = usuarios.map(usuario => {
+                    const tipoBadge = usuario.tipo === 'admin' ? 
+                        '<span class="badge badge-danger">Administrador</span>' : 
+                        '<span class="badge badge-info">Operador</span>';
+
+                    return `
+                        <tr>
+                            <td><strong>${usuario.nome}</strong></td>
+                            <td>${usuario.email}</td>
+                            <td>${tipoBadge}</td>
+                            <td>${formatarData(usuario.data_criacao ? usuario.data_criacao.split(' ')[0] : '')}</td>
+                            <td>${usuario.ultimo_acesso ? formatarData(usuario.ultimo_acesso.split(' ')[0]) : 'Nunca'}</td>
+                            <td class="table-actions">
+                                <button class="btn btn-sm btn-secondary" onclick="editarUsuario(${usuario.id})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deletarUsuario(${usuario.id}, '${usuario.nome}')" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar usuários:', error);
+                document.getElementById('lista-usuarios').innerHTML = `
+                    <tr><td colspan="6" class="empty-state">Erro ao carregar usuários</td></tr>
+                `;
+            }
+        }
+
+        // Abrir modal de novo usuário
+        function abrirModalUsuario() {
+            editandoUsuarioId = null;
+            document.getElementById('modal-titulo').textContent = 'Novo Usuário';
+            document.getElementById('usuario-id').value = '';
+            document.getElementById('senha').required = true;
+            document.getElementById('confirmar-senha').required = true;
+            document.getElementById('senha-label').textContent = '*';
+            document.getElementById('confirmar-label').textContent = '*';
+            document.getElementById('senha-hint').textContent = 'Obrigatório para novo usuário';
+            document.getElementById('form-usuario').reset();
+            document.getElementById('modal-usuario').classList.add('active');
+        }
+
+        function fecharModalUsuario() {
+            document.getElementById('modal-usuario').classList.remove('active');
+            document.getElementById('form-usuario').reset();
+            editandoUsuarioId = null;
+        }
+
+        // Editar usuário
+        async function editarUsuario(id) {
+            try {
+                const response = await fetchAuth(`${API_URL}/usuarios/${id}`);
+                const usuario = await response.json();
+
+                editandoUsuarioId = id;
+                document.getElementById('modal-titulo').textContent = 'Editar Usuário';
+                document.getElementById('usuario-id').value = usuario.id;
+                document.getElementById('nome').value = usuario.nome;
+                document.getElementById('email').value = usuario.email;
+                document.getElementById('tipo').value = usuario.tipo;
+                document.getElementById('senha').required = false;
+                document.getElementById('confirmar-senha').required = false;
+                document.getElementById('senha-label').textContent = '';
+                document.getElementById('confirmar-label').textContent = '';
+                document.getElementById('senha-hint').textContent = 'Deixe em branco para manter a senha atual';
+
+                document.getElementById('modal-usuario').classList.add('active');
+
+            } catch (error) {
+                console.error('Erro ao carregar usuário:', error);
+                alert('Erro ao carregar dados do usuário');
+            }
+        }
+
+        // Salvar usuário (criar ou atualizar)
+        async function salvarUsuario(event) {
+            event.preventDefault();
+
+            const senha = document.getElementById('senha').value;
+            const confirmarSenha = document.getElementById('confirmar-senha').value;
+
+            // Valida senha se estiver preenchida
+            if (senha || confirmarSenha) {
+                if (senha.length < 6) {
+                    alert('A senha deve ter no mínimo 6 caracteres');
+                    return;
+                }
+
+                if (senha !== confirmarSenha) {
+                    alert('As senhas não coincidem');
+                    return;
+                }
+            }
+
+            const btnSalvar = document.getElementById('btn-salvar-usuario');
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+            const dados = {
+                nome: document.getElementById('nome').value,
+                email: document.getElementById('email').value,
+                tipo: document.getElementById('tipo').value
+            };
+
+            // Adiciona senha apenas se preenchida
+            if (senha) {
+                dados.senha = senha;
+            }
+
+            try {
+                let response;
+                
+                if (editandoUsuarioId) {
+                    // Atualizar usuário existente
+                    response = await fetchAuth(`${API_URL}/usuarios/${editandoUsuarioId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(dados)
+                    });
+                } else {
+                    // Criar novo usuário
+                    response = await fetchAuth(`${API_URL}/usuarios`, {
+                        method: 'POST',
+                        body: JSON.stringify(dados)
+                    });
+                }
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert(editandoUsuarioId ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!');
+                    fecharModalUsuario();
+                    carregarUsuarios();
+                } else {
+                    alert('Erro: ' + resultado.error);
+                }
+
+            } catch (error) {
+                console.error('Erro ao salvar usuário:', error);
+                alert('Erro ao salvar usuário');
+            }
+
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        }
+
+        // Deletar usuário
+        async function deletarUsuario(id, nome) {
+            const usuarioAtual = obterUsuario();
+            
+            if (id === usuarioAtual.id) {
+                alert('Você não pode excluir seu próprio usuário!');
+                return;
+            }
+
+            if (!confirm(`Tem certeza que deseja excluir o usuário "${nome}"?\n\nEsta ação não pode ser desfeita!`)) {
+                return;
+            }
+
+            try {
+                const response = await fetchAuth(`${API_URL}/usuarios/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    alert('Usuário excluído com sucesso!');
+                    carregarUsuarios();
+                } else {
+                    alert('Erro ao excluir usuário: ' + resultado.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao excluir usuário');
+            }
+        }
+
+        // Fecha modal ao clicar fora
+        document.getElementById('modal-usuario').addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModalUsuario();
+            }
+        });
+
+        // Carrega usuários ao iniciar
+        carregarUsuarios();
+    </script>
+</body>
+</html>
