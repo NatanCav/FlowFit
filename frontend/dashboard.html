@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistema de Pagamentos</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1><i class="fas fa-money-bill-wave"></i> Sistema de Pagamentos</h1>
+                    <p class="subtitle">Painel de Controle</p>
+                </div>
+                <div class="user-info">
+                    <!-- Informações do usuário serão inseridas via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <div class="container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="dashboard.html" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="clientes.html"><i class="fas fa-users"></i> Clientes</a></li>
+                <li><a href="inadimplentes.html"><i class="fas fa-exclamation-circle"></i> Inadimplentes</a></li>
+                <li><a href="usuarios.html" id="menu-usuarios"><i class="fas fa-user-shield"></i> Usuários</a></li>
+            </ul>
+        </nav>
+
+        <!-- Cards de Estatísticas -->
+        <section class="dashboard">
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="total-clientes">-</h3>
+                    <p>Clientes Ativos</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="pagamentos-pendentes">-</h3>
+                    <p>Pagamentos Pendentes</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="pagamentos-vencidos">-</h3>
+                    <p>Pagamentos Vencidos</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="valor-recebido">-</h3>
+                    <p>Recebido este Mês</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seção: Clientes que Pagaram este Mês -->
+        <div class="section-header">
+            <h2><i class="fas fa-check-circle"></i> Clientes que Pagaram este Mês</h2>
+        </div>
+        
+        <div class="table-container" style="margin-bottom: 2rem;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Telefone</th>
+                        <th>Quantidade</th>
+                        <th>Valor Total</th>
+                        <th>Último Pagamento</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-pagaram-mes">
+                    <tr>
+                        <td colspan="5" class="loading">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Seção: Inadimplentes (Preview) -->
+        <div class="section-header">
+            <h2><i class="fas fa-exclamation-circle"></i> Principais Inadimplentes</h2>
+            <a href="inadimplentes.html" class="btn btn-danger btn-sm">
+                <i class="fas fa-list"></i> Ver Todos
+            </a>
+        </div>
+        
+        <div id="lista-inadimplentes-preview">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Carregando...
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        // Verifica autenticação
+        verificarAutenticacao();
+        inicializarInfoUsuario();
+        marcarMenuAtivo();
+
+        // Esconde menu de usuários se não for admin
+        if (!ehAdmin()) {
+            document.getElementById('menu-usuarios').style.display = 'none';
+        }
+
+        // Carrega dados do dashboard
+        async function carregarDashboard() {
+            try {
+                // Carrega estatísticas
+                const resStats = await fetchAuth(`${API_URL}/dashboard`);
+                const stats = await resStats.json();
+
+                // Atualiza cards
+                document.getElementById('total-clientes').textContent = stats.total_clientes;
+                document.getElementById('pagamentos-pendentes').textContent = stats.pagamentos_pendentes;
+                document.getElementById('pagamentos-vencidos').textContent = stats.pagamentos_vencidos;
+                document.getElementById('valor-recebido').textContent = formatarMoeda(stats.valor_recebido_mes);
+
+                // Carrega clientes que pagaram
+                carregarClientesPagaram();
+
+                // Carrega inadimplentes
+                carregarInadimplentesPreview();
+
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+            }
+        }
+
+        // Carrega clientes que pagaram este mês
+        async function carregarClientesPagaram() {
+            try {
+                const response = await fetchAuth(`${API_URL}/pagamentos/mes-atual`);
+                const clientes = await response.json();
+
+                const tbody = document.getElementById('lista-pagaram-mes');
+
+                if (clientes.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>Nenhum pagamento registrado este mês</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = clientes.map(c => `
+                    <tr>
+                        <td><strong>${c.nome}</strong></td>
+                        <td>${formatarTelefone(c.telefone)}</td>
+                        <td><span class="badge badge-info">${c.qtd_pagamentos}</span></td>
+                        <td><strong>${formatarMoeda(c.valor_total)}</strong></td>
+                        <td>${formatarData(c.ultimo_pagamento)}</td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar clientes:', error);
+                document.getElementById('lista-pagaram-mes').innerHTML = `
+                    <tr><td colspan="5" class="empty-state">Erro ao carregar dados</td></tr>
+                `;
+            }
+        }
+
+        // Carrega preview dos inadimplentes (top 5)
+        async function carregarInadimplentesPreview() {
+            try {
+                const response = await fetchAuth(`${API_URL}/inadimplentes`);
+                const inadimplentes = await response.json();
+
+                const container = document.getElementById('lista-inadimplentes-preview');
+
+                if (inadimplentes.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>Nenhum inadimplente!</h3>
+                            <p>Todos os pagamentos estão em dia</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Mostra apenas os 5 primeiros
+                const top5 = inadimplentes.slice(0, 5);
+
+                container.innerHTML = top5.map(cliente => {
+                    const diasAtraso = calcularDiasEntreDatas(cliente.vencimento_mais_antigo, new Date().toISOString().split('T')[0]);
+                    
+                    return `
+                        <div class="inadimplente-card">
+                            <div class="inadimplente-info">
+                                <h3>${cliente.nome}</h3>
+                                <p><i class="fas fa-phone"></i> ${formatarTelefone(cliente.telefone)}</p>
+                                <p><i class="fas fa-file-invoice"></i> ${cliente.qtd_pendencias} pendência(s)</p>
+                            </div>
+                            <div class="inadimplente-valor">
+                                <div class="valor">${formatarMoeda(cliente.valor_total)}</div>
+                                <div class="dias">${diasAtraso} dias de atraso</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar inadimplentes:', error);
+            }
+        }
+
+        // Inicializa dashboard
+        carregarDashboard();
+    </script>
+</body>
+</html>
