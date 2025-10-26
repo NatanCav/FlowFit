@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inadimplentes - Sistema de Pagamentos</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1><i class="fas fa-money-bill-wave"></i> Sistema de Pagamentos</h1>
+                    <p class="subtitle">Clientes Inadimplentes</p>
+                </div>
+                <div class="user-info"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <div class="container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="clientes.html"><i class="fas fa-users"></i> Clientes</a></li>
+                <li><a href="inadimplentes.html" class="active"><i class="fas fa-exclamation-circle"></i> Inadimplentes</a></li>
+                <li><a href="usuarios.html" id="menu-usuarios"><i class="fas fa-user-shield"></i> Usuários</a></li>
+            </ul>
+        </nav>
+
+        <!-- Resumo -->
+        <div class="dashboard" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-users-slash"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="total-inadimplentes">-</h3>
+                    <p>Total de Inadimplentes</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="total-pendencias">-</h3>
+                    <p>Total de Pendências</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="valor-total">-</h3>
+                    <p>Valor Total em Atraso</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Inadimplentes -->
+        <div class="section-header">
+            <h2><i class="fas fa-exclamation-circle"></i> Lista Completa de Inadimplentes</h2>
+        </div>
+
+        <div id="lista-inadimplentes">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Carregando...
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div id="modal-detalhes" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalhes da Inadimplência</h3>
+                <button class="close-btn" onclick="fecharModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem; color: #4f46e5;">
+                        <i class="fas fa-user"></i> <span id="modal-nome"></span>
+                    </h4>
+                    <p><i class="fas fa-phone"></i> <span id="modal-telefone"></span></p>
+                    <p><i class="fas fa-envelope"></i> <span id="modal-email"></span></p>
+                </div>
+
+                <h4 style="margin: 1.5rem 0 1rem; color: #ef4444;">
+                    <i class="fas fa-file-invoice"></i> Pagamentos Pendentes
+                </h4>
+                <div id="modal-pagamentos"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+                <button class="btn btn-primary" onclick="verHistoricoCompleto()">
+                    <i class="fas fa-history"></i> Ver Histórico Completo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        verificarAutenticacao();
+        inicializarInfoUsuario();
+        marcarMenuAtivo();
+
+        if (!ehAdmin()) {
+            document.getElementById('menu-usuarios').style.display = 'none';
+        }
+
+        let clienteAtual = null;
+
+        // Carrega inadimplentes
+        async function carregarInadimplentes() {
+            try {
+                const response = await fetchAuth(`${API_URL}/inadimplentes`);
+                const inadimplentes = await response.json();
+
+                // Atualiza estatísticas
+                let totalPendencias = 0;
+                let valorTotal = 0;
+
+                inadimplentes.forEach(cliente => {
+                    totalPendencias += cliente.qtd_pendencias;
+                    valorTotal += cliente.valor_total;
+                });
+
+                document.getElementById('total-inadimplentes').textContent = inadimplentes.length;
+                document.getElementById('total-pendencias').textContent = totalPendencias;
+                document.getElementById('valor-total').textContent = formatarMoeda(valorTotal);
+
+                // Renderiza lista
+                const container = document.getElementById('lista-inadimplentes');
+
+                if (inadimplentes.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>Nenhum inadimplente!</h3>
+                            <p>Todos os pagamentos estão em dia</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = inadimplentes.map(cliente => {
+                    const diasAtraso = calcularDiasEntreDatas(
+                        cliente.vencimento_mais_antigo, 
+                        new Date().toISOString().split('T')[0]
+                    );
+                    
+                    return `
+                        <div class="inadimplente-card">
+                            <div class="inadimplente-info">
+                                <h3>${cliente.nome}</h3>
+                                <p><i class="fas fa-phone"></i> ${formatarTelefone(cliente.telefone)}</p>
+                                <p><i class="fas fa-envelope"></i> ${cliente.email || 'Não informado'}</p>
+                                <p><i class="fas fa-file-invoice"></i> ${cliente.qtd_pendencias} pendência(s)</p>
+                            </div>
+                            <div class="inadimplente-valor">
+                                <div class="valor">${formatarMoeda(cliente.valor_total)}</div>
+                                <div class="dias">${diasAtraso} dias de atraso</div>
+                                <button class="btn btn-sm btn-danger" onclick="verDetalhes(${cliente.id})" style="margin-top: 0.5rem;">
+                                    <i class="fas fa-eye"></i> Ver Detalhes
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar inadimplentes:', error);
+                document.getElementById('lista-inadimplentes').innerHTML = `
+                    <div class="empty-state">Erro ao carregar inadimplentes</div>
+                `;
+            }
+        }
+
+        // Ver detalhes do cliente
+        async function verDetalhes(clienteId) {
+            clienteAtual = clienteId;
+
+            try {
+                // Carrega dados do cliente
+                const resCliente = await fetchAuth(`${API_URL}/clientes/${clienteId}`);
+                const cliente = await resCliente.json();
+
+                // Carrega pagamentos pendentes
+                const resPagamentos = await fetchAuth(`${API_URL}/pagamentos?cliente_id=${clienteId}&status=pendente`);
+                const pagamentos = await resPagamentos.json();
+
+                // Filtra apenas vencidos
+                const hoje = new Date().toISOString().split('T')[0];
+                const vencidos = pagamentos.filter(p => p.vencimento < hoje);
+
+                // Preenche modal
+                document.getElementById('modal-nome').textContent = cliente.nome;
+                document.getElementById('modal-telefone').textContent = formatarTelefone(cliente.telefone);
+                document.getElementById('modal-email').textContent = cliente.email || 'Não informado';
+
+                const listaPagamentos = document.getElementById('modal-pagamentos');
+                listaPagamentos.innerHTML = vencidos.map(pag => {
+                    const diasAtraso = calcularDiasEntreDatas(pag.vencimento, hoje);
+                    return `
+                        <div style="padding: 1rem; background: #fee2e2; border-radius: 0.5rem; margin-bottom: 0.75rem; border-left: 4px solid #ef4444;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>${pag.descricao || 'Pagamento'}</strong>
+                                    <p style="font-size: 0.9rem; color: #991b1b; margin-top: 0.25rem;">
+                                        Vencimento: ${formatarData(pag.vencimento)} (${diasAtraso} dias atraso)
+                                    </p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <strong style="font-size: 1.25rem; color: #991b1b;">
+                                        ${formatarMoeda(pag.valor)}
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Abre modal
+                document.getElementById('modal-detalhes').classList.add('active');
+
+            } catch (error) {
+                console.error('Erro ao carregar detalhes:', error);
+                alert('Erro ao carregar detalhes do cliente');
+            }
+        }
+
+        // Fecha modal
+        function fecharModal() {
+            document.getElementById('modal-detalhes').classList.remove('active');
+        }
+
+        // Ver histórico completo
+        function verHistoricoCompleto() {
+            if (clienteAtual) {
+                window.location.href = `historico-pagamento.html?id=${clienteAtual}`;
+            }
+        }
+
+        // Fecha modal ao clicar fora
+        document.getElementById('modal-detalhes').addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModal();
+            }
+        });
+
+        // Carrega inadimplentes ao iniciar
+        carregarInadimplentes();
+    </script>
+</body>
+</html>
