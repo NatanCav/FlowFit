@@ -123,6 +123,10 @@ def criar_pagamento(cliente_id, valor, vencimento, descricao, usuario_id=None):
     """
     Cria um novo pagamento para um cliente
     """
+    # Validação: não aceitar valores negativos
+    if valor <= 0:
+        return {"success": False, "error": "O valor do pagamento deve ser maior que zero"}
+    
     conn = get_connection()
     cursor = conn.cursor()
     
