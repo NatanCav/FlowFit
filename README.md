@@ -1,10 +1,10 @@
 Equipe:
-Lucas Natan de Arruda Cavalcante 01695047
-Davi Carlos da Silva Oliveira 01706558
-Washington Oliveira Alves 01542797
-Adriel Rubem Oliveira de Brito 01698489
-Kauê Felipe de Vasconcelos - 01755410
-Pedro Victor dos Santos Silva - 01693960
+Lucas Natan de Arruda Cavalcante 01695047; 
+Davi Carlos da Silva Oliveira 01706558;
+Washington Oliveira Alves 01542797;
+Adriel Rubem Oliveira de Brito 01698489;
+Kauê Felipe de Vasconcelos - 01755410;
+Pedro Victor dos Santos Silva - 01693960;
 
 # 💰 FlowFit - Sistema de Gerenciamento de Pagamentos
 
