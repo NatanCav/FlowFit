@@ -88,14 +88,14 @@ FlowFit/
 
 ### Pré-requisitos
 - Python 3.8 ou superior
-- Navegador web moderno (Chrome, Firefox, Edge)
+- Navegador web moderno (Chrome, Firefox, Edge, Brave)
 
 ### Passo 1: Clone ou baixe o projeto
 
 ```bash
 # Se estiver usando git
 git clone <url-do-repositorio>
-cd payment-manager
+cd FlowFit
 
 # Ou simplesmente extraia o arquivo ZIP
 ```
@@ -186,23 +186,6 @@ Você verá uma mensagem assim:
 - Controla pagamentos
 - Visualiza relatórios
 - Não pode criar/editar usuários
-
-## 🔒 Segurança
-
-### Produção
-Se for usar em produção, altere:
-
-1. **Chave Secreta do JWT** em `backend/auth.py`:
-```python
-SECRET_KEY = 'sua-chave-secreta-aqui-mude-em-producao'  # Altere esta linha!
-```
-
-2. **Debug Mode** em `backend/app.py`:
-```python
-app.run(debug=False, host='0.0.0.0', port=5000)  # debug=False em produção
-```
-
-3. **Altere a senha do admin** após primeiro login
 
 ## 🐛 Solução de Problemas
 
