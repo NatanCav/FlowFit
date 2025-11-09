@@ -248,24 +248,27 @@ def deletar_pagamento(pagamento_id):
 def obter_estatisticas():
     """
     Obtém estatísticas gerais do sistema
+    Separa corretamente pagamentos pendentes (no prazo) e vencidos (atrasados)
     """
     conn = get_connection()
     cursor = conn.cursor()
+    
+    data_hoje = date.today().isoformat()
+    mes_atual = datetime.now().strftime('%Y-%m')
     
     # Total de clientes ativos
     cursor.execute('SELECT COUNT(*) as total FROM clientes WHERE ativo = 1')
     total_clientes = cursor.fetchone()['total']
     
-    # Pagamentos pendentes
-    cursor.execute('SELECT COUNT(*) as total FROM pagamentos WHERE status = "pendente"')
+    # Pagamentos pendentes DENTRO DO PRAZO (vencimento >= hoje)
+    cursor.execute('''
+        SELECT COUNT(*) as total 
+        FROM pagamentos 
+        WHERE status = "pendente" AND vencimento >= ?
+    ''', (data_hoje,))
     pagamentos_pendentes = cursor.fetchone()['total']
     
-    # Valor total em aberto
-    cursor.execute('SELECT COALESCE(SUM(valor), 0) as total FROM pagamentos WHERE status = "pendente"')
-    valor_em_aberto = cursor.fetchone()['total']
-    
-    # Pagamentos vencidos (data de vencimento já passou)
-    data_hoje = date.today().isoformat()
+    # Pagamentos VENCIDOS (vencimento < hoje)
     cursor.execute('''
         SELECT COUNT(*) as total 
         FROM pagamentos 
@@ -273,8 +276,26 @@ def obter_estatisticas():
     ''', (data_hoje,))
     pagamentos_vencidos = cursor.fetchone()['total']
     
+    # Valor pendente DENTRO DO PRAZO
+    cursor.execute('''
+        SELECT COALESCE(SUM(valor), 0) as total 
+        FROM pagamentos 
+        WHERE status = "pendente" AND vencimento >= ?
+    ''', (data_hoje,))
+    valor_pendente = cursor.fetchone()['total']
+    
+    # Valor VENCIDO (em atraso)
+    cursor.execute('''
+        SELECT COALESCE(SUM(valor), 0) as total 
+        FROM pagamentos 
+        WHERE status = "pendente" AND vencimento < ?
+    ''', (data_hoje,))
+    valor_vencido = cursor.fetchone()['total']
+    
+    # Valor total em aberto (pendentes + vencidos)
+    valor_em_aberto = valor_pendente + valor_vencido
+    
     # Valor recebido no mês atual
-    mes_atual = datetime.now().strftime('%Y-%m')
     cursor.execute('''
         SELECT COALESCE(SUM(valor), 0) as total 
         FROM pagamentos 
@@ -294,9 +315,11 @@ def obter_estatisticas():
     
     return {
         "total_clientes": total_clientes,
-        "pagamentos_pendentes": pagamentos_pendentes,
-        "valor_em_aberto": valor_em_aberto,
-        "pagamentos_vencidos": pagamentos_vencidos,
+        "pagamentos_pendentes": pagamentos_pendentes,  # No prazo
+        "pagamentos_vencidos": pagamentos_vencidos,    # Atrasados
+        "valor_pendente": valor_pendente,              # Valor no prazo
+        "valor_vencido": valor_vencido,                # Valor atrasado
+        "valor_em_aberto": valor_em_aberto,            # Total (pendente + vencido)
         "valor_recebido_mes": valor_recebido_mes,
         "clientes_pagaram_mes": clientes_pagaram_mes
     }
