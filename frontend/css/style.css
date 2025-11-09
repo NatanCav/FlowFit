@@ -73,17 +73,25 @@ body {
 }
 
 .header h1 {
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-size: 1.50rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
+.header .logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-right: 15px ;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
 .header .subtitle {
     font-size: 0.9rem;
     opacity: 0.9;
-    margin-top: 0.25rem;
+    margin-top: 0.10rem;
 }
 
 /* Navbar */
