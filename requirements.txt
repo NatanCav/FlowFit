@@ -1,9 +1,0 @@
-# Dependências do Sistema de Gerenciamento de Pagamentos
-# Para instalar: pip install -r requirements.txt
-
-Flask==3.0.0
-Flask-CORS==4.0.0
-PyJWT==2.8.0
-werkzeug==3.0.0
-Flask-SQLAlchemy==3.1.1
-mysql-connector-python==8.1.0

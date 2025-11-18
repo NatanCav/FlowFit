@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Aplicação Flask
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - SQLALCHEMY_DATABASE_URI=mysql+mysqlconnector://root:2Abcsp%40drao@db:3306/flowfit
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  # Banco de dados MySQL
+  db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=2Abcsp@drao
+      - MYSQL_DATABASE=flowfit
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  # Frontend (servidor web simples)
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
