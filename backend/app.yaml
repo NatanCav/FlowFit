@@ -1,0 +1,12 @@
+runtime: python312
+entrypoint: python backend/app.py
+env: standard
+
+env_variables:
+  DATABASE_URL: 'postgresql+psycopg2://postgres:admin123@/flowfit?host=/cloudsql/flowfit:southamerica-east1:flowfit-db'
+
+instance_class: F1
+
+handlers:
+- url: /.*
+  script: auto

@@ -10,6 +10,7 @@ import database
 import models
 import auth
 
+
 # Inicializa o Flask
 app = Flask(__name__)
 CORS(app)  # Permite requisições do frontend
@@ -397,3 +398,16 @@ if __name__ == '__main__':
     
     # Inicia o servidor Flask
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+    from flask import send_from_directory
+import os
+
+# ... (código existente)
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('../frontend', path)
+
+@app.route('/')
+def index():
+    return send_from_directory('../frontend', 'login.html')
